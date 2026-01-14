@@ -307,21 +307,19 @@
 
                 data.idealAnswers.forEach((item, index) => {
                     box.innerHTML += `
-        <div class="comparison-item">
-  <p class="comparison-title">Q${index + 1}: ${item.question}</p>
-
-  <div class="comparison-grid">
-    <div class="user-answer">
-      <strong>Your Answer</strong>
-      <p>${userAnswers[index] || "No answer provided"}</p>
-    </div>
-
-    <div class="ideal-answer">
-      <strong>Ideal Answer (10/10)</strong>
-      <p>${item.idealAnswer}</p>
-    </div>
-  </div>
-</div> `;
+                    <div class="comparison-item">
+                        <div class="comparison-title">Question ${index + 1}: ${item.question}</div>
+                        <div class="comparison-grid">
+                            <div class="user-answer">
+                                <strong>Your Answer</strong>
+                                <div>${userAnswers[index] || "<em>No answer provided</em>"}</div>
+                            </div>
+                            <div class="ideal-answer">
+                                <strong>Ideal Answer (10/10)</strong>
+                                <div>${item.idealAnswer}</div>
+                            </div>
+                        </div>
+                    </div>`;
                 });
 
                 box.classList.remove("hidden-empty");

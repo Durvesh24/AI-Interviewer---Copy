@@ -626,3 +626,70 @@ label {
     transform: rotate(360deg);
   }
 }
+
+/* Ideal Answers Comparison */
+.comparison-item {
+  margin-bottom: 30px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.comparison-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: var(--text-color);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.user-answer,
+.ideal-answer {
+  padding: 15px;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.user-answer {
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid var(--text-muted);
+}
+
+.user-answer strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+}
+
+.ideal-answer {
+  background: rgba(16, 185, 129, 0.1);
+  border-left: 3px solid var(--success-color);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.ideal-answer strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #6ee7b7;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+}
