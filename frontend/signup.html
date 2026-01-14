@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - AI Interviewer</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Shared CSS only -->
+    <style>
+        /* Minimal layout override if needed, mostly handled by style.css */
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">AI Interview Coach</a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-container auth-container">
+        <h2>Create Account</h2>
+        <p class="subtitle">Join to track your progress</p>
+
+        <div class="card auth-card">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" class="input-field" placeholder="you@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" class="input-field" placeholder="Create a password" required>
+            </div>
+
+            <!-- Optional Admin Code -->
+            <div class="form-group" style="margin-top:20px; border-top:1px solid var(--card-border); padding-top:20px;">
+                <label for="adminCode" style="font-size:0.8rem;">Admin Code (Optional)</label>
+                <input type="text" id="adminCode" class="input-field" placeholder="Enter secret code if you have one">
+            </div>
+
+            <button onclick="signup()" class="btn btn-success">Sign Up</button>
+            <div id="error-msg" class="error-message"></div>
+        </div>
+
+        <div class="auth-links">
+            Already have an account? <a href="login.html">Login</a>
+        </div>
+    </div>
+
+    <script>
+        async function signup() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const adminCode = document.getElementById('adminCode').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            errorMsg.style.display = 'none';
+
+            if (!email || !password) {
+                errorMsg.innerText = "Please fill in all fields";
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            try {
+                const button = document.querySelector('button');
+                button.disabled = true;
+                button.innerText = "Creating account...";
+
+                const res = await fetch('http://localhost:5000/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, adminCode })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert("Account created! Please login.");
+                    window.location.href = 'login.html';
+                } else {
+                    errorMsg.innerText = data.error || "Registration failed";
+                    errorMsg.style.display = 'block';
+                    button.disabled = false;
+                    button.innerText = "Sign Up";
+                }
+            } catch (err) {
+                errorMsg.innerText = "Server error. Is the backend running?";
+                errorMsg.style.display = 'block';
+                button.disabled = false;
+                button.innerText = "Sign Up";
+            }
+        }
+    </script>
+</body>
+
+</html>

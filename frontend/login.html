@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AI Interviewer</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Shared CSS only -->
+    <style>
+        /* Minimal layout override if needed, mostly handled by style.css */
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">AI Interview Coach</a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-container auth-container">
+        <h2>Welcome Back</h2>
+        <p class="subtitle">Login to access your dashboard</p>
+
+        <div class="card auth-card">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" class="input-field" placeholder="you@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" class="input-field" placeholder="••••••••" required>
+            </div>
+
+            <button onclick="login()" class="btn btn-primary">Sign In</button>
+            <div id="error-msg" class="error-message"></div>
+        </div>
+
+        <div class="auth-links">
+            Don't have an account? <a href="signup.html">Sign up</a>
+        </div>
+    </div>
+
+    <script>
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            errorMsg.style.display = 'none';
+
+            if (!email || !password) {
+                errorMsg.innerText = "Please fill in all fields";
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            try {
+                const button = document.querySelector('button');
+                button.disabled = true;
+                button.innerText = "Signing in...";
+
+                const res = await fetch('http://localhost:5000/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userEmail', data.email);
+                    localStorage.setItem('userRole', data.role);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    errorMsg.innerText = data.error || "Login failed";
+                    errorMsg.style.display = 'block';
+                    button.disabled = false;
+                    button.innerText = "Sign In";
+                }
+            } catch (err) {
+                errorMsg.innerText = "Server error. Is the backend running?";
+                errorMsg.style.display = 'block';
+                button.disabled = false;
+                button.innerText = "Sign In";
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AI Interviewer</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Shared CSS only -->
+    <style>
+        /* Minimal layout override */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        /* Admin Tabs */
+        .admin-tabs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 5px 10px;
+            font-weight: 600;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        /* User Table */
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .user-table th,
+        .user-table td {
+            text-align: left;
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .user-table th {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--primary-color);
+        }
+
+        .action-btn {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            margin-right: 5px;
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-edit {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+
+        .btn-edit:hover {
+            background: rgba(59, 130, 246, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">AI Interview Coach</a>
+            <div class="nav-links">
+                <span id="user-display" style="margin-right: 15px; font-weight: 500;"></span>
+                <a href="#" onclick="logout()" class="logout-link">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-container">
+        <header class="dashboard-header">
+            <div class="welcome-text">
+                <h1>My Dashboard</h1>
+                <p>Track your interview performance</p>
+            </div>
+            <a href="mock-interview.html" class="btn btn-primary" style="width: auto;">+ Start New Interview</a>
+        </header>
+
+        <section id="admin-section" class="hidden">
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="switchTab('interviews')">All Interviews</button>
+                <button class="tab-btn" onclick="switchTab('users')">User Management</button>
+            </div>
+        </section>
+
+        <!-- Interviews Tab -->
+        <section id="interviews-view">
+            <div class="interview-list-header">
+                <h3>Past Interviews</h3>
+            </div>
+            <div id="interview-list">
+                <div class="empty-state">Loading interviews...</div>
+            </div>
+        </section>
+
+        <!-- User Management Tab (Admin Only) -->
+        <section id="users-view" class="hidden">
+            <div class="interview-list-header">
+                <h3>Manage Users</h3>
+            </div>
+            <div id="user-list">
+                <!-- User Table will go here -->
+                <div class="empty-state">Loading users...</div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('userRole');
+
+        if (!token) window.location.href = 'login.html';
+
+        document.getElementById('user-display').innerText = localStorage.getItem('userEmail') || 'User';
+
+        // Setup Admin View
+        if (role === 'admin') {
+            document.querySelector('.welcome-text h1').innerText = "Admin Control Center";
+            document.querySelector('.welcome-text h1').style.background = "linear-gradient(to right, #ec4899, #8b5cf6)";
+            document.querySelector('.welcome-text h1').style.webkitBackgroundClip = "text";
+            document.querySelector('.welcome-text h1').style.webkitTextFillColor = "transparent";
+
+            document.querySelector('.welcome-text p').innerText = "Manage users and oversee all interview performance";
+            document.querySelector('.welcome-text p').style.color = "#d1d5db";
+
+            // Hide 'Start Interview' button for admins to keep UI clean, or keep it if they want to test.
+            // Let's keep it but maybe less prominent? For now, user just asked about the header text.
+            document.getElementById('admin-section').classList.remove('hidden');
+        }
+
+        async function fetchInterviews() {
+            try {
+                const endpoint = role === 'admin' ? 'http://localhost:5000/admin/all-interviews' : 'http://localhost:5000/my-interviews';
+                const res = await fetch(endpoint, { headers: { 'Authorization': `Bearer ${token}` } });
+
+                if (res.status === 401 || res.status === 403) return logout();
+
+                const data = await res.json();
+                const list = document.getElementById('interview-list');
+
+                if (data.length === 0) {
+                    list.innerHTML = `<div class="empty-state"><p>No interviews found yet.</p></div>`;
+                    return;
+                }
+
+                list.innerHTML = data.map(interview => {
+                    const date = new Date(interview.date).toLocaleDateString(undefined, {
+                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+                    const avgScore = interview.scores.length
+                        ? (interview.scores.reduce((a, b) => a + b, 0) / interview.scores.length).toFixed(1) : 0;
+
+                    let badgeClass = avgScore >= 7 ? 'high' : (avgScore >= 5 ? '' : 'low');
+                    const userLabel = role === 'admin' && interview.email
+                        ? `<div style="font-size:0.8rem; color:var(--secondary-color); margin-bottom:4px;">${interview.email}</div>` : '';
+
+                    return `
+                        <div class="interview-card">
+                            <div>
+                                ${userLabel}
+                                <div class="interview-role">${interview.role}</div>
+                                <div class="interview-date">${date}</div>
+                            </div>
+                            <div class="score-badge ${badgeClass}">Avg Score: ${avgScore} / 10</div>
+                        </div>`;
+                }).join('');
+            } catch (err) {
+                console.error(err);
+                document.getElementById('interview-list').innerHTML = '<div class="empty-state">Failed to load.</div>';
+            }
+        }
+
+        async function fetchUsers() {
+            if (role !== 'admin') return;
+            try {
+                const res = await fetch('http://localhost:5000/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
+                const users = await res.json();
+
+                const list = document.getElementById('user-list');
+                if (users.length === 0) return list.innerHTML = '<div class="empty-state">No users found.</div>';
+
+                let html = `
+                    <table class="user-table">
+                        <thead><tr><th>ID</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead>
+                        <tbody>
+                `;
+
+                html += users.map(user => `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.email}</td>
+                        <td>${user.role}</td>
+                        <td>
+                            <button onclick="editUser(${user.id}, '${user.role}')" class="btn action-btn btn-edit">Edit</button>
+                            <button onclick="deleteUser(${user.id})" class="btn action-btn btn-delete">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                html += '</tbody></table>';
+                list.innerHTML = html;
+            } catch (err) {
+                console.error(err);
+                document.getElementById('user-list').innerHTML = '<div class="empty-state">Failed to load users.</div>';
+            }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm("Are you sure? This will delete the user and all their data permanently.")) return;
+            try {
+                const res = await fetch(`http://localhost:5000/admin/users/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) fetchUsers(); // Refresh list
+                else alert("Failed to delete user");
+            } catch (e) { alert("Error deleting user"); }
+        }
+
+        async function editUser(id, currentRole) {
+            const newRole = prompt("Enter new role (user/admin):", currentRole);
+            if (!newRole || newRole === currentRole) return;
+            try {
+                const res = await fetch(`http://localhost:5000/admin/users/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ role: newRole })
+                });
+                if (res.ok) fetchUsers();
+                else alert("Failed to update user");
+            } catch (e) { alert("Error updating user"); }
+        }
+
+        function switchTab(tab) {
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (tab === 'interviews') {
+                document.getElementById('interviews-view').classList.remove('hidden');
+                document.getElementById('users-view').classList.add('hidden');
+            } else {
+                document.getElementById('interviews-view').classList.add('hidden');
+                document.getElementById('users-view').classList.remove('hidden');
+                fetchUsers();
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        fetchInterviews();
+    </script>
+</body>
+
+</html>

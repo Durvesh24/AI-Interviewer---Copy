@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Interview Coach - Master Your Skills</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Shared CSS only -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="logo">AI Interview Coach</a>
+      <div class="nav-links">
+        <a href="index.html" class="active">Home</a>
+        <a href="#features">Features</a>
+        <a href="#about">About</a>
+        <span id="auth-links">
+          <a href="login.html" class="btn-login">Login</a>
+          <a href="signup.html" class="btn-signup">Sign Up</a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <script>
+    // Simple auth check for navbar
+    const token = localStorage.getItem('token');
+    const authLinks = document.getElementById('auth-links');
+    if (token) {
+      authLinks.innerHTML = `
+            <a href="dashboard.html" style="margin-right:15px;text-decoration:none;color:var(--text-color);font-weight:600;">Dashboard</a>
+            <a href="#" onclick="logout()" style="text-decoration:none;color:var(--text-muted);">Logout</a>
+        `;
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('userEmail');
+      window.location.reload();
+    }
+  </script>
+
+  <header class="hero-section">
+    <div class="hero-content">
+      <h1>Master Your Interview Skills</h1>
+      <p>Get real-time feedback, practice with AI-generated questions, and boost your confidence for your next big
+        opportunity.</p>
+      <a href="mock-interview.html" class="btn btn-primary btn-lg btn-glow">Start Interview Simulation</a>
+    </div>
+  </header>
+
+  <main class="features-section" id="features">
+    <h2 class="section-heading">Everything You Need to Succeed</h2>
+
+    <div class="features-grid">
+      <!-- Feature 1: Mock Interview -->
+      <div class="feature-card">
+        <div class="icon">🎤</div>
+        <h3>Mock Interview</h3>
+        <p>Simulate a real interview environment with AI-generated questions tailored to your target role.</p>
+        <a href="mock-interview.html" class="link-text">Start Interview &rarr;</a>
+      </div>
+
+      <!-- Feature 2: Practice Questions -->
+      <div class="feature-card">
+        <div class="icon">📚</div>
+        <h3>Practice Questions</h3>
+        <p>Access a curated list of common interview questions for various roles and difficulty levels.</p>
+        <a href="#" class="link-text disabled">Coming Soon</a>
+      </div>
+
+      <!-- Feature 3: Resume Review -->
+      <div class="feature-card">
+        <div class="icon">📄</div>
+        <h3>Resume Review</h3>
+        <p>Get instant feedback on your resume to ensure it passes ATS and catches recruiters' eyes.</p>
+        <a href="#" class="link-text disabled">Coming Soon</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <p>&copy; 2025 AI Interview Coach. All rights reserved.</p>
+  </footer>
+
+</body>
+
+</html>

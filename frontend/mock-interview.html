@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock Interview - AI Interview Coach</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Link CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="app-container">
+        <header class="app-header">
+            <a href="index.html" class="back-link">← Back to Home</a>
+            <h1>Mock Interview</h1>
+            <p class="subtitle">Simulate a real interview experience</p>
+        </header>
+
+        <main class="main-content">
+            <div class="card setup-card">
+                <div class="form-group">
+                    <label for="role">Target Role</label>
+                    <input type="text" id="role" placeholder="e.g. Software Engineer Intern" class="input-field">
+                </div>
+
+                <div class="form-group">
+                    <label for="difficulty">Difficulty Level</label>
+                    <select id="difficulty" class="select-field">
+                        <option value="Beginner">Beginner</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Advanced">Advanced</option>
+                    </select>
+                </div>
+
+                <button onclick="startInterview()" class="btn btn-primary">🚀 Start Your Session</button>
+            </div>
+
+            <!-- Question Area -->
+            <div id="questionBox" class="card question-card hidden">
+                <div class="progress-section">
+                    <div id="progressText" class="progress-text">Question 1</div>
+                    <div class="progress-container">
+                        <div id="progressBar" class="progress-bar"></div>
+                    </div>
+                </div>
+
+                <h3 class="section-title" style="margin-top: 20px;">Current Challenge</h3>
+                <p class="question-text" id="questionText"></p>
+                <textarea id="answer" class="textarea-field"
+                    placeholder="Type your confident answer here..."></textarea>
+                <button onclick="submitAnswer()" class="btn btn-success" id="submitBtn">Submit Answer</button>
+
+                <div id="loading" class="loading-container" style="display:none; margin-top:20px; text-align:center;">
+                    <br>
+                    <div class="spinner"></div>
+                    <span style="color:var(--secondary-color); font-weight:600;">Analysing your brilliance...</span>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div id="feedbackBox" class="card feedback-card hidden-empty"></div>
+
+            <!-- Final Summary -->
+            <div id="summaryBox" class="card summary-card hidden">
+                <h3>🎉 Stats Sheet</h3>
+                <p id="finalScore" style="font-size:1.5rem; font-weight:bold;"></p>
+                <p id="finalVerdict" style="color:var(--text-muted);"></p>
+            </div>
+
+            <!-- Ideal Answers -->
+            <div class="ideal-answers-section">
+                <button onclick="getIdealAnswers()" class="btn btn-secondary" style="margin-top:20px;">View Ideal
+                    Answers (10/10)</button>
+                <div id="comparisonBox" class="card ideal-answers-card hidden-empty" style="margin-top:20px;"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- AUTH CHECK ---
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = 'login.html';
+        }
+
+        let interviewId = "";
+        let questions = [];
+        let currentQuestion = 0;
+        let userAnswers = [];
+
+        async function startInterview() {
+            const role = document.getElementById("role").value;
+            const difficulty = document.getElementById("difficulty").value;
+            const btn = document.querySelector(".setup-card .btn-primary");
+
+            if (!role) {
+                alert("Please enter a job role.");
+                return;
+            }
+
+            // Loading State
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner" style="width:20px;height:20px;border-width:2px;margin-right:8px;"></span> Setting up environment...`;
+
+            try {
+                const res = await fetch("http://localhost:5000/start-interview", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ role, difficulty })
+                });
+
+                if (res.status === 401 || res.status === 403) {
+                    alert("Session expired. Please login again.");
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const data = await res.json();
+                interviewId = data.interviewId;
+                questions = data.questions;
+                currentQuestion = 0;
+
+                document.getElementById("questionBox").classList.remove("hidden");
+                document.querySelector(".setup-card").classList.add("hidden"); // Hide setup card
+
+                // Scroll to question box
+                document.getElementById("questionBox").scrollIntoView({ behavior: 'smooth' });
+                showQuestion();
+            } catch (error) {
+                console.error("Error starting interview:", error);
+                alert("Failed to start interview. Is the backend running?");
+                btn.disabled = false;
+                btn.innerText = "🚀 Start Your Session";
+            }
+        }
+
+        function showQuestion() {
+            document.getElementById("questionText").innerText =
+                questions[currentQuestion];
+
+            document.getElementById("answer").value = "";
+
+            // Hide feedback
+            const feedbackBox = document.getElementById("feedbackBox");
+            feedbackBox.innerText = "";
+            feedbackBox.classList.add("hidden-empty");
+
+            // 🔴 ALWAYS hide loading when showing a question
+            const loading = document.getElementById("loading");
+            loading.style.display = "none";
+
+            // Progress update
+            const progressPercent =
+                ((currentQuestion + 1) / questions.length) * 100;
+
+            document.getElementById("progressBar").style.width =
+                progressPercent + "%";
+
+            document.getElementById("progressText").innerText =
+                `Question ${currentQuestion + 1} of ${questions.length}`;
+        }
+
+        async function submitAnswer() {
+            const answer = document.getElementById("answer").value;
+            const submitBtn = document.getElementById("submitBtn");
+
+            if (!answer.trim()) {
+                alert("Please type an answer.");
+                return;
+            }
+
+            const loading = document.getElementById("loading");
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Evaluating...";
+            loading.style.display = "flex";
+
+            try {
+                const res = await fetch("http://localhost:5000/answer", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        interviewId,
+                        question: questions[currentQuestion],
+                        answer
+                    })
+                });
+
+                const data = await res.json();
+                userAnswers.push(answer);
+
+                loading.style.display = "none";
+                submitBtn.innerText = "Submit Answer";
+
+                // Show feedback
+                const feedbackBox = document.getElementById("feedbackBox");
+                feedbackBox.innerHTML = `<strong>Feedback:</strong> ${data.feedback}`;
+                feedbackBox.classList.remove("hidden-empty");
+                feedbackBox.scrollIntoView({ behavior: "smooth" });
+
+                currentQuestion++;
+
+                if (currentQuestion < questions.length) {
+                    setTimeout(() => {
+                        submitBtn.disabled = false;
+                        showQuestion();
+                    }, 4000);
+                } else {
+                    // Last Question Logic: Wait 4s then show summary
+                    setTimeout(() => {
+                        document.getElementById("progressBar").style.width = "100%";
+                        document.getElementById("questionBox").classList.add("hidden");
+                        document.getElementById("feedbackBox").classList.add("hidden-empty");
+                        getSummary();
+                    }, 4000);
+                }
+
+            } catch (error) {
+                loading.style.display = "none";
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Submit Answer";
+                console.error("Error submitting answer:", error);
+            }
+        }
+
+        async function getSummary() {
+            try {
+                const res = await fetch("http://localhost:5000/interview-summary", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ interviewId })
+                });
+
+                const data = await res.json();
+
+                document.getElementById("finalScore").innerText =
+                    `⭐ Average Score: ${data.averageScore} / 10`;
+
+                document.getElementById("finalVerdict").innerText =
+                    `🧠 Verdict: ${data.verdict}`;
+
+                // Fix visibility logic: use hidden class instead of hidden-empty
+                document.getElementById("summaryBox").classList.remove("hidden");
+                document.getElementById("summaryBox").scrollIntoView({ behavior: "smooth" });
+
+            } catch (error) {
+                console.error("Error getting summary:", error);
+            }
+        }
+
+        async function getIdealAnswers() {
+            const btn = document.querySelector(".ideal-answers-section .btn-secondary");
+            const originalText = btn.innerText;
+
+            // Loading State
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px;margin-right:8px;"></span> Fetching expert solutions...`;
+
+            try {
+                const res = await fetch("http://localhost:5000/ideal-answers", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ interviewId })
+                });
+
+                const data = await res.json();
+                const box = document.getElementById("comparisonBox");
+
+                // Restore Button
+                btn.disabled = false;
+                btn.innerText = originalText;
+
+                if (data.error) {
+                    box.innerText = data.error;
+                    box.classList.remove("hidden-empty");
+                    return;
+                }
+
+                box.innerHTML = "<h3>Answer Comparison</h3>";
+
+                data.idealAnswers.forEach((item, index) => {
+                    box.innerHTML += `
+        <div class="comparison-item">
+  <p class="comparison-title">Q${index + 1}: ${item.question}</p>
+
+  <div class="comparison-grid">
+    <div class="user-answer">
+      <strong>Your Answer</strong>
+      <p>${userAnswers[index] || "No answer provided"}</p>
+    </div>
+
+    <div class="ideal-answer">
+      <strong>Ideal Answer (10/10)</strong>
+      <p>${item.idealAnswer}</p>
+    </div>
+  </div>
+</div> `;
+                });
+
+                box.classList.remove("hidden-empty");
+                box.scrollIntoView({ behavior: "smooth" });
+
+            } catch (error) {
+                console.error("Comparison error:", error);
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
+        }
+
+
+        // Force-hide loading on page load
+        window.addEventListener("load", () => {
+            const loading = document.getElementById("loading");
+            if (loading) {
+                loading.style.display = "none";
+            }
+        });
+
+    </script>
+
+</body>
+
+</html>
