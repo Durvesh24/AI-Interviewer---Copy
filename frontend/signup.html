@@ -72,7 +72,14 @@
                 button.disabled = true;
                 button.innerText = "Creating account...";
 
-                const res = await fetch('/register', {
+                const getApiBaseUrl = () => {
+                    if (window.location.protocol === 'file:') return 'http://localhost:5000';
+                    if (window.location.hostname === 'localhost' && window.location.port !== '5000') return 'http://localhost:5000';
+                    return '';
+                };
+                const API_BASE_URL = getApiBaseUrl();
+
+                const res = await fetch(`${API_BASE_URL}/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password, adminCode })

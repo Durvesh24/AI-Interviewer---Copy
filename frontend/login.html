@@ -65,7 +65,14 @@
                 button.disabled = true;
                 button.innerText = "Signing in...";
 
-                const res = await fetch('/login', {
+                const getApiBaseUrl = () => {
+                    if (window.location.protocol === 'file:') return 'http://localhost:5000';
+                    if (window.location.hostname === 'localhost' && window.location.port !== '5000') return 'http://localhost:5000';
+                    return '';
+                };
+                const API_BASE_URL = getApiBaseUrl();
+
+                const res = await fetch(`${API_BASE_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })

@@ -139,6 +139,13 @@
     <script>
         const token = localStorage.getItem('token');
         const role = localStorage.getItem('userRole');
+        const getApiBaseUrl = () => {
+            if (window.location.protocol === 'file:') return 'http://localhost:5000';
+            if (window.location.hostname === 'localhost' && window.location.port !== '5000') return 'http://localhost:5000';
+            return '';
+        };
+        const API_BASE_URL = getApiBaseUrl();
+
 
         if (!token) window.location.href = 'login.html';
 
@@ -154,14 +161,12 @@
             document.querySelector('.welcome-text p').innerText = "Manage users and oversee all interview performance";
             document.querySelector('.welcome-text p').style.color = "#d1d5db";
 
-            // Hide 'Start Interview' button for admins to keep UI clean, or keep it if they want to test.
-            // Let's keep it but maybe less prominent? For now, user just asked about the header text.
             document.getElementById('admin-section').classList.remove('hidden');
         }
 
         async function fetchInterviews() {
             try {
-                const endpoint = role === 'admin' ? '/admin/all-interviews' : '/my-interviews';
+                const endpoint = role === 'admin' ? `${API_BASE_URL}/admin/all-interviews` : `${API_BASE_URL}/my-interviews`;
                 const res = await fetch(endpoint, { headers: { 'Authorization': `Bearer ${token}` } });
 
                 if (res.status === 401 || res.status === 403) return logout();
@@ -204,7 +209,7 @@
         async function fetchUsers() {
             if (role !== 'admin') return;
             try {
-                const res = await fetch('/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch(`${API_BASE_URL}/admin/users`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const users = await res.json();
 
                 const list = document.getElementById('user-list');
@@ -239,7 +244,7 @@
         async function deleteUser(id) {
             if (!confirm("Are you sure? This will delete the user and all their data permanently.")) return;
             try {
-                const res = await fetch(`/admin/users/${id}`, {
+                const res = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -252,7 +257,7 @@
             const newRole = prompt("Enter new role (user/admin):", currentRole);
             if (!newRole || newRole === currentRole) return;
             try {
-                const res = await fetch(`/admin/users/${id}`, {
+                const res = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${token}`,

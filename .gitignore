@@ -4,6 +4,7 @@ package-lock.json
 
 # Environment Variables
 .env
+database.db
 
 # System Files
 .DS_Store

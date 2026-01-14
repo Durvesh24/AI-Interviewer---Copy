@@ -96,6 +96,14 @@
         let currentQuestion = 0;
         let userAnswers = [];
 
+        const getApiBaseUrl = () => {
+            if (window.location.protocol === 'file:') return 'http://localhost:5000';
+            if (window.location.hostname === 'localhost' && window.location.port !== '5000') return 'http://localhost:5000';
+            return '';
+        };
+        const API_BASE_URL = getApiBaseUrl();
+
+
         async function startInterview() {
             const role = document.getElementById("role").value;
             const difficulty = document.getElementById("difficulty").value;
@@ -111,7 +119,7 @@
             btn.innerHTML = `<span class="spinner" style="width:20px;height:20px;border-width:2px;margin-right:8px;"></span> Setting up environment...`;
 
             try {
-                const res = await fetch("/start-interview", {
+                const res = await fetch(`${API_BASE_URL}/start-interview`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -186,7 +194,7 @@
             loading.style.display = "flex";
 
             try {
-                const res = await fetch("/answer", {
+                const res = await fetch(`${API_BASE_URL}/answer`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -238,7 +246,7 @@
 
         async function getSummary() {
             try {
-                const res = await fetch("/interview-summary", {
+                const res = await fetch(`${API_BASE_URL}/interview-summary`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -273,7 +281,7 @@
             btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px;margin-right:8px;"></span> Fetching expert solutions...`;
 
             try {
-                const res = await fetch("/ideal-answers", {
+                const res = await fetch(`${API_BASE_URL}/ideal-answers`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
