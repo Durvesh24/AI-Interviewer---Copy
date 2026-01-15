@@ -102,7 +102,7 @@
 
     <script>
         // Auth check already done in <head>, token is available
-        const token = localStorage.getItem('token');
+        // const token = localStorage.getItem('token'); // Removed to avoid redeclaration error
 
         let interviewId = "";
         let questions = [];
@@ -110,8 +110,11 @@
         let userAnswers = [];
 
         const getApiBaseUrl = () => {
-            if (window.location.protocol === 'file:') return 'http://localhost:5000';
-            if (window.location.hostname === 'localhost' && window.location.port !== '5000') return 'http://localhost:5000';
+            const h = window.location.hostname;
+            const p = window.location.protocol;
+            if (p === 'file:' || h === 'localhost' || h === '127.0.0.1' || h.startsWith('192.168.')) {
+                return 'http://localhost:5000';
+            }
             return '';
         };
         const API_BASE_URL = getApiBaseUrl();
@@ -160,7 +163,13 @@
                 showQuestion();
             } catch (error) {
                 console.error("Error starting interview:", error);
-                alert("Failed to start interview. Is the backend running?");
+                let msg = "Failed to start interview.";
+                if (error.message.includes("Failed to fetch")) {
+                    msg += " The backend server seems to be offline. Please run 'npm start' in the backend folder.";
+                } else {
+                    msg += " " + error.message;
+                }
+                alert(msg);
                 btn.disabled = false;
                 btn.innerText = "🚀 Start Your Session";
             }
@@ -254,6 +263,7 @@
                 submitBtn.disabled = false;
                 submitBtn.innerText = "Submit Answer";
                 console.error("Error submitting answer:", error);
+                alert("Error submitting answer: " + error.message);
             }
         }
 
@@ -282,6 +292,7 @@
 
             } catch (error) {
                 console.error("Error getting summary:", error);
+                alert("Failed to get summary: " + error.message);
             }
         }
 
@@ -342,6 +353,7 @@
                 console.error("Comparison error:", error);
                 btn.disabled = false;
                 btn.innerText = originalText;
+                alert("Error fetching ideal answers: " + error.message);
             }
         }
 

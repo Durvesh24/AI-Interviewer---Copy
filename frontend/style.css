@@ -33,6 +33,10 @@
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: var(--font-family);
   background: var(--background-gradient);
@@ -155,14 +159,31 @@ body::before {
 
 .nav-links a {
   text-decoration: none;
-  color: var(--text-muted);
+  color: #cbd5e1;
   font-weight: 500;
-  transition: color 0.2s;
+  transition: color var(--transition-fast);
+  position: relative;
+}
+
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  transition: width var(--transition-fast);
+}
+
+.nav-links a:hover::after,
+.nav-links a.active::after {
+  width: 100%;
 }
 
 .nav-links a:hover,
 .nav-links a.active {
-  color: var(--text-color);
+  color: #ffffff;
 }
 
 /* Header & Typography */
@@ -280,9 +301,10 @@ label {
   border: none;
   border-radius: var(--radius);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
   width: 100%;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  text-decoration: none !important;
 }
 
 .btn:active {
@@ -698,7 +720,7 @@ label {
   left: -2px;
   right: -2px;
   bottom: -2px;
-  background: linear-gradient(135deg, var(--primary-color), var(--accent-purple), var(--secondary-color));
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15), rgba(236, 72, 153, 0.15));
   border-radius: var(--radius);
   opacity: 0;
   z-index: -1;
@@ -711,8 +733,9 @@ label {
 
 .feature-card:hover {
   transform: translateY(-8px) scale(1.02);
-  border-color: transparent;
-  box-shadow: 0 20px 60px -10px rgba(99, 102, 241, 0.4), 0 0 0 2px rgba(99, 102, 241, 0.1) inset;
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 20px 60px -10px rgba(99, 102, 241, 0.4), 0 0 0 1px rgba(99, 102, 241, 0.3) inset;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .feature-card::before {
@@ -734,7 +757,7 @@ label {
 .icon {
   font-size: 3rem;
   margin-bottom: 20px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1));
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(236, 72, 153, 0.15));
   width: 80px;
   height: 80px;
   line-height: 80px;
@@ -747,6 +770,7 @@ label {
   justify-content: center;
   transition: all var(--transition-normal);
   position: relative;
+  z-index: 1;
 }
 
 .icon::before {
@@ -754,7 +778,7 @@ label {
   position: absolute;
   inset: -2px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(236, 72, 153, 0.3));
   opacity: 0;
   transition: opacity var(--transition-normal);
   z-index: -1;
@@ -773,28 +797,40 @@ label {
   font-size: 1.5rem;
   margin-bottom: 15px;
   color: var(--text-color);
+  position: relative;
+  z-index: 1;
 }
 
 .feature-card p {
   color: var(--text-muted);
   margin-bottom: 25px;
   font-size: 1rem;
+  position: relative;
+  z-index: 1;
 }
 
 .link-text {
-  color: var(--secondary-color);
+  color: #f472b6;
   text-decoration: none;
   font-weight: 600;
-  transition: margin-left 0.2s;
+  transition: all var(--transition-fast);
+  position: relative;
+  z-index: 1;
+}
+
+.feature-card:hover .link-text {
+  color: #fbbf24;
 }
 
 .link-text:not(.disabled):hover {
   margin-left: 5px;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
 }
 
 .link-text.disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+  color: var(--text-muted);
 }
 
 .app-footer {
