@@ -33,13 +33,13 @@
   </nav>
 
   <script>
-    // Clear auth state on landing page to ensure fresh start
-    localStorage.clear();
-    
-    // Simple auth check for navbar (will always show login/signup now)
+    const token = localStorage.getItem('token');
     const authLinks = document.getElementById('auth-links');
-    // No need to check token since we just cleared it
-    // Always show login/signup buttons
+
+    if (token) {
+      // User is logged in, show Dashboard button
+      authLinks.innerHTML = '<a href="dashboard.html" class="btn-login" style="background-color: var(--primary-color); border-color: var(--primary-color);">Dashboard</a>';
+    }
   </script>
 
   <header class="hero-section">
