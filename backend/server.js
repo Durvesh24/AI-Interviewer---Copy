@@ -5,7 +5,7 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { HfInference } from "@huggingface/inference";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getDb } from "./db.js";
@@ -21,7 +21,8 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "../frontend")));
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey"; // In production, use .env
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const hf = new HfInference(process.env.HF_API_KEY);
+console.log("HF_API_KEY Loaded:", process.env.HF_API_KEY ? "YES (" + process.env.HF_API_KEY.substring(0, 5) + "...)" : "NO");
 
 // Auth Middleware
 const authenticateToken = (req, res, next) => {
@@ -243,18 +244,39 @@ app.post("/start-interview", authenticateToken, async (req, res) => {
     const db = await getDb();
 
     // Use a valid model name
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = "Qwen/Qwen2.5-72B-Instruct";
 
-    const prompt = `You are a professional interviewer.
-    Ask exactly ${questionCount} short and to the point ${difficulty}-level interview questions for a ${role}.
+    const systemPrompt = "You are a professional interviewer.";
+    const userPrompt = `Ask exactly ${questionCount} short and to the point ${difficulty}-level interview questions for a ${role}.
     Return only numbered questions.`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    console.log("Requesting interview questions from Hugging Face...");
+    let response;
+    try {
+      response = await hf.chatCompletion({
+        model: model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        max_tokens: 512,
+        temperature: 0.7
+      });
+      console.log("HF Response received");
+    } catch (apiError) {
+      console.error("HF API ERROR:", apiError);
+      return res.status(500).json({ error: "Failed to connect to AI service", details: apiError.message });
+    }
+
+    if (!response || !response.choices || !response.choices[0]) {
+      console.error("Invalid HF Response:", JSON.stringify(response, null, 2));
+      return res.status(500).json({ error: "Invalid response from AI service" });
+    }
+
+    const text = response.choices[0].message.content;
 
     if (!text) {
-      return res.status(500).json({ error: "Gemini did not return questions" });
+      return res.status(500).json({ error: "AI did not return questions" });
     }
 
     const questions = text.split("\n").map(q => q.trim()).filter(q => q.length > 0);
@@ -298,18 +320,26 @@ app.post("/answer", authenticateToken, async (req, res) => {
       return res.status(400).json({ error: "Answer is required" });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = "Qwen/Qwen2.5-72B-Instruct";
 
-    const prompt = `You are an interview coach.
-    Question: ${question}
+    const systemPrompt = "You are an interview coach.";
+    const userPrompt = `Question: ${question}
     Candidate Answer: ${answer}
     Evaluate briefly and respond exactly like this:
     Score (out of 10): <number>
     Feedback: <one sentence>`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const result = await hf.chatCompletion({
+      model: model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: 256,
+      temperature: 0.7
+    });
+
+    const text = result.choices[0].message.content;
 
     const match = text.match(/Score\s*\(out of 10\)\s*:\s*(\d+)/i);
     const score = match ? parseInt(match[1]) : 0;
@@ -374,14 +404,20 @@ app.post("/ideal-answers", authenticateToken, async (req, res) => {
       return res.status(404).json({ error: "Interview not found" });
     }
 
-    const { role, questions: questionsJson } = interview;
+    const { role, questions: questionsJson, answers: answersJson } = interview;
     const questions = JSON.parse(questionsJson);
+    const answers = JSON.parse(answersJson);
+
+    if (answers.length < questions.length) {
+      return res.status(403).json({ error: "You must complete the interview before viewing ideal answers." });
+    }
+
     const difficulty = "Intermediate"; // Could store this in DB too if needed, simplifying for now
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = "Qwen/Qwen2.5-72B-Instruct";
 
-    const prompt = `
-        You are a senior interviewer.
+    const systemPrompt = "You are a senior interviewer.";
+    const userPrompt = `
         For each interview question, generate an IDEAL (10/10) answer.
         Answers should be clear, short, structured, and interview-ready.
         Job Role: ${role}
@@ -393,9 +429,17 @@ app.post("/ideal-answers", authenticateToken, async (req, res) => {
         ${questions.map((q, i) => `${i + 1}. ${q}`).join("\n")}
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const rawText = response.text();
+    const result = await hf.chatCompletion({
+      model: model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: 1024,
+      temperature: 0.7
+    });
+
+    const rawText = result.choices[0].message.content;
 
     let idealAnswers;
     try {

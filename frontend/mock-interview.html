@@ -93,11 +93,11 @@
             <div id="summaryBox" class="card summary-card hidden">
                 <h3>🎉 Stats Sheet</h3>
                 <p id="finalScore" style="font-size:1.5rem; font-weight:bold;"></p>
-                <p id="finalVerdict" style="color:var(--text-muted);"></p>
+                <p id="finalVerdict" style="color:var(--text-muted); margin-top: 15px;"></p>
             </div>
 
-            <!-- Ideal Answers -->
-            <div class="ideal-answers-section">
+            <!-- Ideal Answers: Hidden until interview is complete -->
+            <div class="ideal-answers-section hidden">
                 <button onclick="getIdealAnswers()" class="btn btn-secondary" style="margin-top:20px;">View Ideal
                     Answers (10/10)</button>
                 <div id="comparisonBox" class="card ideal-answers-card hidden-empty" style="margin-top:20px;"></div>
@@ -263,6 +263,8 @@
                         document.getElementById("questionBox").classList.add("hidden");
                         document.getElementById("feedbackBox").classList.add("hidden-empty");
                         getSummary();
+                        // Reveal Ideal Answers Section
+                        document.querySelector(".ideal-answers-section").classList.remove("hidden");
                     }, 4000);
                 }
 
