@@ -159,6 +159,11 @@
                 }
 
                 const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || `Server returned ${res.status}`);
+                }
+
                 interviewId = data.interviewId;
                 questions = data.questions;
                 currentQuestion = 0;
