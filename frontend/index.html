@@ -33,6 +33,9 @@
   </nav>
 
   <script>
+    // Clear any previous session when the landing page is opened
+    localStorage.clear();
+
     const token = localStorage.getItem('token');
     const authLinks = document.getElementById('auth-links');
 
@@ -63,18 +66,18 @@
     <h2 class="section-heading">Everything You Need to Succeed</h2>
 
     <div class="features-grid">
-      <!-- Feature 1: Mock Interview -->
+      <!-- Feature 1: Practice Questions -->
       <div class="feature-card">
         <div class="icon">🎤</div>
-        <h3>Mock Interview</h3>
+        <h3>Practice Questions</h3>
         <p>Simulate a real interview environment with AI-generated questions tailored to your target role.</p>
         <a href="mock-interview.html" class="link-text">Start Interview &rarr;</a>
       </div>
 
-      <!-- Feature 2: Practice Questions -->
+      <!-- Feature 2: Mock Interview -->
       <div class="feature-card">
         <div class="icon">📚</div>
-        <h3>Practice Questions</h3>
+        <h3>Mock Interview</h3>
         <p>Access a curated list of common interview questions for various roles and difficulty levels.</p>
         <a href="#" class="link-text disabled">Coming Soon</a>
       </div>
