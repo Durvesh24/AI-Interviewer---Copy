@@ -114,6 +114,9 @@ app.post("/login", async (req, res) => {
 
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: "1h" });
 
+    // Update Last Login
+    await db.run("UPDATE users SET last_login = ? WHERE id = ?", [new Date().toISOString(), user.id]);
+
     // Send Login Notification (Non-blocking)
     sendEmail(
       email,
@@ -212,7 +215,7 @@ app.get("/admin/users", authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'admin') return res.status(403).json({ error: "Access denied" });
     const db = await getDb();
-    const users = await db.all("SELECT id, email, role FROM users ORDER BY id DESC");
+    const users = await db.all("SELECT id, email, role, last_login FROM users ORDER BY id DESC");
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -261,7 +264,7 @@ app.get("/admin/users/:id/interviews", authenticateToken, async (req, res) => {
     const db = await getDb();
 
     // Get user info
-    const user = await db.get("SELECT id, email FROM users WHERE id = ?", [id]);
+    const user = await db.get("SELECT id, email, role, last_login FROM users WHERE id = ?", [id]);
     if (!user) return res.status(404).json({ error: "User not found" });
 
     // Get all interviews for this user

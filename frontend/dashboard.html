@@ -419,15 +419,16 @@
                 html += users.map(user => `
                     <tr>
                         <td>${user.id}</td>
-                        <td>${user.email}</td>
+                        <td>
+                            <a href="admin-user-details.html?id=${user.id}" style="color: var(--secondary-color); text-decoration: none; font-weight: 500;">
+                                ${user.email}
+                            </a>
+                        </td>
                         <td>${user.role === 'user' ? 'Learner' : 'Admin'}</td>
                         <td>
-                            <select onchange="handleUserAction(this, ${user.id}, '${user.role}', '${user.email}')" style="padding: 6px; border-radius: 4px; border: 1px solid var(--card-border); background: var(--card-bg); color: var(--text-color);">
-                                <option value="" disabled selected>Actions</option>
-                                <option value="performance">Performance</option>
-                                <option value="change_role">Change Role</option>
-                                <option value="delete">Delete</option>
-                            </select>
+                            <div style="display: flex; gap: 5px;">
+                                <a href="admin-user-details.html?id=${user.id}" class="btn action-btn btn-edit" style="text-decoration:none;">View</a>
+                            </div>
                         </td>
                     </tr>
                 `).join('');

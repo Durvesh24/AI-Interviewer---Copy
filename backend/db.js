@@ -125,6 +125,12 @@ export async function getDb() {
     } catch (err) {
       // Ignore error if column already exists
     }
+
+    try {
+      await db.run("ALTER TABLE users ADD COLUMN last_login TEXT");
+    } catch (err) {
+      // Ignore
+    }
   }
 
   return db;

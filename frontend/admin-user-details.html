@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Details - Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .back-nav {
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .back-nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s;
+        }
+
+        .back-nav a:hover {
+            color: var(--primary-color);
+        }
+
+        .profile-header {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .profile-info h1 {
+            margin: 0 0 10px 0;
+            background: linear-gradient(to right, #ec4899, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat-badge {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            padding: 10px 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f3f4f6;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
+            font-size: 1.2rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 10px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 25px;
+            border-left: 2px solid var(--card-border);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 5px;
+            width: 10px;
+            height: 10px;
+            background: var(--secondary-color);
+            border-radius: 50%;
+        }
+
+        .timeline-date {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .timeline-content {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+        }
+
+        .badge-role {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .role-admin {
+            background: rgba(139, 92, 246, 0.2);
+            color: #c4b5fd;
+        }
+
+        .role-user {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loader" class="loading-overlay">Loading User Profile...</div>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">AI Interview Coach</a>
+            <div class="nav-links">
+                <a href="#" onclick="logout()" class="logout-link">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-container">
+        <div class="back-nav">
+            <a href="dashboard.html">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Profile Header -->
+        <header class="profile-header">
+            <div class="profile-info">
+                <h1 id="userName">User Profile</h1>
+                <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                    <span id="userRoleBadge" class="badge-role">Role</span>
+                    <span style="color: var(--text-muted);">|</span>
+                    <span style="color: var(--text-muted);">Last Login: <span id="lastLogin">...</span></span>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button onclick="deleteUser()" class="btn"
+                        style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; font-size: 0.9rem; padding: 6px 12px;">Delete
+                        User</button>
+                    <button onclick="toggleRole()" class="btn"
+                        style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; font-size: 0.9rem; padding: 6px 12px; margin-left: 10px;">Switch
+                        User Role</button>
+                </div>
+            </div>
+            <div class="profile-stats">
+                <div class="stat-badge">
+                    <span class="stat-value" id="totalInterviews">0</span>
+                    <span class="stat-label">Interviews</span>
+                </div>
+                <div class="stat-badge">
+                    <span class="stat-value" id="avgScore">0</span>
+                    <span class="stat-label">Avg Output</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid-layout">
+            <!-- Left Column: Chart & Activities -->
+            <div>
+                <div class="section-card">
+                    <h2 class="section-title">Performance Trend</h2>
+                    <canvas id="userPerformanceChart"></canvas>
+                </div>
+
+                <div class="section-card">
+                    <h2 class="section-title">Interview History</h2>
+                    <div id="interviewTimeline">
+                        <!-- Timeline Items Injected Here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Quick Insights -->
+            <div>
+                <div class="section-card">
+                    <h2 class="section-title">Insights</h2>
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <div>
+                            <span style="color: var(--text-muted); font-size: 0.9rem;">Highest Score</span>
+                            <div style="font-size: 1.2rem; font-weight: 600; color: #10b981;" id="highScore">-</div>
+                        </div>
+                        <div>
+                            <span style="color: var(--text-muted); font-size: 0.9rem;">Lowest Score</span>
+                            <div style="font-size: 1.2rem; font-weight: 600; color: #ef4444;" id="lowScore">-</div>
+                        </div>
+                        <div>
+                            <span style="color: var(--text-muted); font-size: 0.9rem;">Favorite Role</span>
+                            <div style="font-size: 1.1rem; color: #f3f4f6;" id="topRole">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('userRole');
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('id');
+
+        if (!token || role !== 'admin' || !userId) {
+            window.location.href = 'dashboard.html';
+        }
+
+        const getApiBaseUrl = () => {
+            const h = window.location.hostname;
+            const p = window.location.protocol;
+            if (p === 'file:' || h === 'localhost' || h === '127.0.0.1' || h.startsWith('192.168.')) {
+                return 'http://localhost:5000';
+            }
+            return '';
+        };
+        const API_BASE_URL = getApiBaseUrl();
+
+        let currentUserData = null;
+
+        async function fetchUserDetails() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/interviews`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!res.ok) throw new Error("Failed to fetch data");
+
+                const data = await res.json();
+                currentUserData = data;
+                renderPage(data);
+            } catch (err) {
+                console.error(err);
+                alert("Error loading user profile");
+                document.getElementById('loader').innerText = "Error loading data.";
+            }
+        }
+
+        function renderPage(data) {
+            const { user, interviews } = data;
+
+            // Header Info
+            document.getElementById('userName').innerText = user.email;
+            document.getElementById('lastLogin').innerText = user.last_login ? new Date(user.last_login).toLocaleString() : 'Never';
+
+            const roleBadge = document.getElementById('userRoleBadge');
+            roleBadge.innerText = user.role === 'admin' ? 'Administrator' : 'Learner';
+            roleBadge.className = `badge-role role-${user.role === 'admin' ? 'admin' : 'user'}`;
+
+            // Stats
+            document.getElementById('totalInterviews').innerText = interviews.length;
+
+            const allScores = interviews.flatMap(i => i.scores);
+            const avg = allScores.length ? (allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(1) : "0.0";
+            document.getElementById('avgScore').innerText = avg;
+
+            // Insights
+            document.getElementById('highScore').innerText = allScores.length ? Math.max(...allScores) : '-';
+            document.getElementById('lowScore').innerText = allScores.length ? Math.min(...allScores) : '-';
+
+            // Top Role
+            if (interviews.length > 0) {
+                const roles = {};
+                interviews.forEach(i => { roles[i.role] = (roles[i.role] || 0) + 1; });
+                const topRole = Object.keys(roles).reduce((a, b) => roles[a] > roles[b] ? a : b);
+                document.getElementById('topRole').innerText = topRole;
+            }
+
+            // Timeline
+            const timeline = document.getElementById('interviewTimeline');
+            if (interviews.length === 0) {
+                timeline.innerHTML = '<p class="text-muted">No interviews taken yet.</p>';
+            } else {
+                timeline.innerHTML = interviews.map(i => {
+                    const iAvg = i.scores.length ? (i.scores.reduce((a, b) => a + b, 0) / i.scores.length).toFixed(1) : 0;
+                    return `
+                    <div class="timeline-item">
+                        <span class="timeline-date">${new Date(i.date).toLocaleString()}</span>
+                        <div class="timeline-content">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                                <strong>${i.role}</strong>
+                                <span style="color: ${iAvg >= 7 ? '#10b981' : '#f59e0b'}">Score: ${iAvg}</span>
+                            </div>
+                            <div style="display: flex; gap: 10px; font-size: 0.85rem;">
+                                <button onclick="viewInterviewDetails('${i.id}')" style="background:none; border:none; color:var(--primary-color); cursor:pointer;">View Details</button>
+                                <button onclick="deleteInterview('${i.id}')" style="background:none; border:none; color:#f87171; cursor:pointer;">Delete</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            // Chart
+            renderChart(interviews);
+
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        function renderChart(interviews) {
+            const sorted = [...interviews].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const ctx = document.getElementById('userPerformanceChart').getContext('2d');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sorted.map(i => new Date(i.date).toLocaleDateString()),
+                    datasets: [{
+                        label: 'Score History',
+                        data: sorted.map(i => i.scores.length ? (i.scores.reduce((a, b) => a + b, 0) / i.scores.length) : 0),
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true, max: 10, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        async function deleteUser() {
+            if (!confirm("Are you sure you want to permanently delete this user?")) return;
+            try {
+                await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                window.location.href = 'dashboard.html';
+            } catch (e) { alert("Delete failed"); }
+        }
+
+        async function toggleRole() {
+            const newRole = currentUserData.user.role === 'admin' ? 'user' : 'admin';
+            if (!confirm(`Change role to ${newRole === 'user' ? 'Learner' : 'Admin'}?`)) return;
+
+            try {
+                await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: newRole })
+                });
+                location.reload();
+            } catch (e) { alert("Update failed"); }
+        }
+
+        async function deleteInterview(id) {
+            if (!confirm("Delete this interview record?")) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/admin/interviews/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) fetchUserDetails();
+            } catch (e) { alert("Delete failed"); }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        fetchUserDetails();
+    </script>
+</body>
+
+</html>
