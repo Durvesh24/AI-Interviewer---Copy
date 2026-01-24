@@ -200,7 +200,8 @@
         <section id="admin-section" class="hidden">
             <div class="admin-tabs">
                 <button class="tab-btn active" onclick="switchTab('interviews')">Past Interviews</button>
-                <button class="tab-btn" onclick="switchTab('performance')">Performance Analytics</button>
+                <button id="admin-analytics-tab" class="tab-btn" onclick="switchTab('performance')">Performance
+                    Analytics</button>
                 <button id="admin-tab-btn" class="tab-btn hidden" onclick="switchTab('users')">User Management</button>
             </div>
         </section>
@@ -219,12 +220,6 @@
         <section id="performance-view" class="hidden">
             <div class="interview-list-header">
                 <h3>Performance Analytics</h3>
-                <div id="admin-analytics-controls" class="hidden" style="margin-bottom: 15px;">
-                    <select id="adminUserAnalyticsSelect" onchange="renderAnalytics()"
-                        style="padding: 8px; border-radius: 6px; border: 1px solid var(--card-border); background: var(--card-bg); color: var(--text-color);">
-                        <option value="all">All Users (Aggregate)</option>
-                    </select>
-                </div>
             </div>
             <div class="card"
                 style="background: var(--card-bg); padding: 20px; border-radius: var(--radius); border: 1px solid var(--card-border);">
@@ -270,6 +265,34 @@
         </div>
     </div>
 
+    <!-- User Performance Modal -->
+    <div id="userPerformanceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="perfModalTitle">User Performance</h2>
+                <button class="modal-close" onclick="closeUserPerformanceModal()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <canvas id="modalPerformanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Role Modal -->
+    <div id="changeRoleModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 id="roleModalTitle">Change User Role</h2>
+                <button class="modal-close" onclick="closeRoleModal()">&times;</button>
+            </div>
+            <p id="roleModalUserText" style="margin-bottom: 15px;"></p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="confirmRoleChange('user')">Make Learner</button>
+                <button class="btn btn-secondary" onclick="confirmRoleChange('admin')">Make Admin</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const token = localStorage.getItem('token');
         const role = localStorage.getItem('userRole');
@@ -300,13 +323,11 @@
 
             document.getElementById('admin-section').classList.remove('hidden');
             document.getElementById('admin-tab-btn').classList.remove('hidden');
-            document.getElementById('admin-analytics-controls').classList.remove('hidden');
-
-            // fetch users to populate the dropdown
-            fetchUsersForDropdown();
 
             // Hide the Start Interview button for admins
             document.getElementById('startInterviewBtn').style.display = 'none';
+            // Hide separate performance tab for admins (accessed via Users now)
+            document.getElementById('admin-analytics-tab').style.display = 'none';
         }
 
         async function fetchInterviews() {
@@ -399,10 +420,14 @@
                     <tr>
                         <td>${user.id}</td>
                         <td>${user.email}</td>
-                        <td>${user.role}</td>
+                        <td>${user.role === 'user' ? 'Learner' : 'Admin'}</td>
                         <td>
-                            <button onclick="editUser(${user.id}, '${user.role}')" class="btn action-btn btn-edit">Edit</button>
-                            <button onclick="deleteUser(${user.id})" class="btn action-btn btn-delete">Delete</button>
+                            <select onchange="handleUserAction(this, ${user.id}, '${user.role}', '${user.email}')" style="padding: 6px; border-radius: 4px; border: 1px solid var(--card-border); background: var(--card-bg); color: var(--text-color);">
+                                <option value="" disabled selected>Actions</option>
+                                <option value="performance">Performance</option>
+                                <option value="change_role">Change Role</option>
+                                <option value="delete">Delete</option>
+                            </select>
                         </td>
                     </tr>
                 `).join('');
@@ -415,24 +440,19 @@
             }
         }
 
-        async function fetchUsersForDropdown() {
-            if (role !== 'admin') return;
-            try {
-                const res = await fetch(`${API_BASE_URL}/admin/users`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const users = await res.json();
 
-                const select = document.getElementById('adminUserAnalyticsSelect');
-                // Keep the first option (All Users)
-                select.innerHTML = '<option value="all">All Users (Aggregate)</option>';
+        // --- Admin Action Handlers ---
 
-                users.forEach(user => {
-                    const opt = document.createElement('option');
-                    opt.value = user.id;
-                    opt.innerText = `${user.email} (${user.role})`;
-                    select.appendChild(opt);
-                });
-            } catch (err) {
-                console.error("Failed to load users for dropdown", err);
+        function handleUserAction(selectElem, userId, currentRole, userEmail) {
+            const action = selectElem.value;
+            selectElem.value = ""; // Reset dropdown
+
+            if (action === 'delete') {
+                deleteUser(userId);
+            } else if (action === 'performance') {
+                showUserPerformance(userId, userEmail);
+            } else if (action === 'change_role') {
+                openRoleModal(userId, userEmail);
             }
         }
 
@@ -448,11 +468,22 @@
             } catch (e) { alert("Error deleting user"); }
         }
 
-        async function editUser(id, currentRole) {
-            const newRole = prompt("Enter new role (user/admin):", currentRole);
-            if (!newRole || newRole === currentRole) return;
+        let selectedUserIdForRole = null;
+        function openRoleModal(id, email) {
+            selectedUserIdForRole = id;
+            document.getElementById('roleModalUserText').innerText = `Select new role for: ${email}`;
+            document.getElementById('changeRoleModal').classList.add('active');
+        }
+
+        function closeRoleModal() {
+            document.getElementById('changeRoleModal').classList.remove('active');
+            selectedUserIdForRole = null;
+        }
+
+        async function confirmRoleChange(newRole) {
+            if (!selectedUserIdForRole) return;
             try {
-                const res = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
+                const res = await fetch(`${API_BASE_URL}/admin/users/${selectedUserIdForRole}`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -460,7 +491,10 @@
                     },
                     body: JSON.stringify({ role: newRole })
                 });
-                if (res.ok) fetchUsers();
+                if (res.ok) {
+                    closeRoleModal();
+                    fetchUsers();
+                }
                 else alert("Failed to update user");
             } catch (e) { alert("Error updating user"); }
         }
@@ -478,7 +512,7 @@
                 document.getElementById('interviews-view').classList.remove('hidden');
             } else if (tab === 'performance') {
                 document.getElementById('performance-view').classList.remove('hidden');
-                renderAnalytics();
+                if (role !== 'admin') renderAnalytics(); // Only render for non-admin on this tab
             } else {
                 document.getElementById('users-view').classList.remove('hidden');
                 fetchUsers();
@@ -495,99 +529,86 @@
             window.location.href = 'mock-interview.html';
         }
 
-        // --- Analytics Logic ---
-        let chartInstance = null;
+        // --- Analytics Chart Logic ---
+
+        // 1. User's Own Analytics (Performance Tab)
+        // 2. Admin's Analytics for Specific User (Modal)
+
+        let chartInstance = null; // For the main tab
+        let modalChartInstance = null; // For the admin modal
+
         async function renderAnalytics() {
+            // This function is now ONLY for the "Performance" tab, which is hidden for admins or used by learners
+            if (role === 'admin') return;
+
             try {
-                let interviews = [];
-
-                if (role === 'admin') {
-                    const selectedUserId = document.getElementById('adminUserAnalyticsSelect').value;
-
-                    if (selectedUserId === 'all') {
-                        // Admin: Fetch all interviews from all users
-                        const res = await fetch(`${API_BASE_URL}/admin/all-interviews`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        interviews = await res.json();
-                    } else {
-                        // Admin: Fetch specific user interviews
-                        const res = await fetch(`${API_BASE_URL}/admin/users/${selectedUserId}/interviews`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        const data = await res.json();
-                        interviews = data.interviews; // The endpoint returns { user, interviews: [] }
-                    }
-                } else {
-                    // Regular user: Fetch only their interviews
-                    const res = await fetch(`${API_BASE_URL}/my-interviews`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    interviews = await res.json();
-                }
-
-                // Process Data: Sort by date ascending for chart
-                const sorted = interviews.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-                const labels = sorted.map(i => {
-                    const date = new Date(i.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-                    // For admin, add email to label
-                    return role === 'admin' && i.email ? `${date} (${i.email.split('@')[0]})` : date;
+                const res = await fetch(`${API_BASE_URL}/my-interviews`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
+                const interviews = await res.json();
+                drawChart(interviews, 'performanceChart', 'Your Average Score');
+            } catch (err) { console.error("Analytics Error:", err); }
+        }
 
-                const scores = sorted.map(i => {
-                    const avg = i.scores.length ? (i.scores.reduce((a, b) => a + b, 0) / i.scores.length) : 0;
-                    return avg.toFixed(1);
+        async function showUserPerformance(userId, userEmail) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/interviews`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
+                const data = await res.json(); // { user, interviews }
 
-                const ctx = document.getElementById('performanceChart').getContext('2d');
+                document.getElementById('perfModalTitle').innerText = `Performance: ${userEmail}`;
+                document.getElementById('userPerformanceModal').classList.add('active');
 
-                if (chartInstance) chartInstance.destroy();
+                drawChart(data.interviews, 'modalPerformanceChart', `Average Score (${userEmail})`, true);
 
-                chartInstance = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: role === 'admin'
-                                ? (document.getElementById('adminUserAnalyticsSelect').value === 'all' ? 'All Users Average Score' : 'User Average Score')
-                                : 'Your Average Score',
-                            data: scores,
-                            borderColor: '#8b5cf6',
-                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                            borderWidth: 2,
-                            tension: 0.4,
-                            fill: true,
-                            pointBackgroundColor: '#ec4899'
-                        }]
+            } catch (e) { console.error(e); alert("Failed to load user performance"); }
+        }
+
+        function closeUserPerformanceModal() {
+            document.getElementById('userPerformanceModal').classList.remove('active');
+        }
+
+        function drawChart(interviews, canvasId, label, isModal = false) {
+            const sorted = interviews.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const labels = sorted.map(i => new Date(i.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+            const scores = sorted.map(i => {
+                const avg = i.scores.length ? (i.scores.reduce((a, b) => a + b, 0) / i.scores.length) : 0;
+                return avg.toFixed(1);
+            });
+
+            const ctx = document.getElementById(canvasId).getContext('2d');
+
+            let updateInstance = isModal ? modalChartInstance : chartInstance;
+            if (updateInstance) updateInstance.destroy();
+
+            const newChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: scores,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#ec4899'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true, max: 10, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af' } },
+                        x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
                     },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                max: 10,
-                                grid: { color: 'rgba(255,255,255,0.1)' },
-                                ticks: { color: '#9ca3af' }
-                            },
-                            x: {
-                                grid: { display: false },
-                                ticks: {
-                                    color: '#9ca3af',
-                                    maxRotation: 45,
-                                    minRotation: 45
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: { labels: { color: '#e5e7eb' } }
-                        }
-                    }
-                });
+                    plugins: { legend: { labels: { color: '#e5e7eb' } } }
+                }
+            });
 
-            } catch (err) {
-                console.error("Analytics Error:", err);
-            }
+            if (isModal) modalChartInstance = newChart;
+            else chartInstance = newChart;
         }
 
         async function deleteInterview(interviewId) {
