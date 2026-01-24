@@ -493,24 +493,20 @@
         }
 
         // --- Interview Details Logic ---
-        // Looking at server.js, /my-interviews/:id checks `WHERE id = ? AND user_id = ?` using req.user.id.
-        // So admins CANNOT use that endpoint to view other users' interviews.
+        async function viewInterviewDetails(id) {
+            try {
+                // Find the interview in the locally fetched data
+                const interview = currentUserData.interviews.find(i => i.id === id);
 
-        // We need to use the data we already fetched in `currentUserData` to avoid a new call 
-        // OR created a new admin endpoint. 
-        // Luckily, we pulled ALL interview data in `fetchUserDetails()` including questions/answers/scores!
+                if (!interview) {
+                    alert("Interview details not found.");
+                    return;
+                }
 
-        const interview = currentUserData.interviews.find(i => i.id === id);
+                const modal = document.getElementById('interviewDetailsModal');
+                const content = document.getElementById('detailsContent');
 
-        if (!interview) {
-            alert("Interview details not found in loaded data.");
-            return;
-        }
-
-        const modal = document.getElementById('interviewDetailsModal');
-        const content = document.getElementById('detailsContent');
-
-        let html = `
+                let html = `
                     <div style="margin-bottom: 20px;">
                         <h3 style="color: var(--primary-color);">${interview.role}</h3>
                         <p style="color: var(--text-muted); font-size: 0.9rem;">
@@ -519,19 +515,52 @@
                     </div>
                 `;
 
-                // The data from admin/users/:id/interviews is already parsed:
-                // scores: JSON.parse(i.scores || "[]") etc...
-                // Wait, checking server.js... 
-                // app.get("/admin/users/:id/interviews" ...)
-                // It parses scores. BUT it does NOT return questions or answers columns in the SELECT statement!
-                // line 269: "SELECT id, role, date, scores FROM interviews..."
-                // Oh no! The previous step missed fetching questions and answers for the admin view!
-                // I need to update the server to include those columns first.
+                if (interview.questions && interview.questions.length > 0) {
+                    html += interview.questions.map((q, index) => {
+                        const answer = interview.answers[index] || "No answer provided";
+                        const score = interview.scores[index] !== undefined ? interview.scores[index] : "-";
+
+                        // Color code score
+                        let scoreColor = '#ef4444'; // red
+                        if (score >= 7) scoreColor = '#10b981'; // green
+                        else if (score >= 4) scoreColor = '#f59e0b'; // orange
+
+                        return `
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                                <div style="margin-bottom: 8px; font-weight: 600; color: #e5e7eb;">
+                                    Q${index + 1}: ${q}
+                                </div>
+                                <div style="margin-bottom: 8px; color: #d1d5db; font-size: 0.95rem;">
+                                    <strong style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Candidate Answer:</strong><br>
+                                    ${answer}
+                                </div>
+                                <div style="font-size: 0.9rem; font-weight: 600; color: ${scoreColor};">
+                                    Score: ${score}/10
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    html += '<p>No questions recorded for this interview.</p>';
+                }
+
+                content.innerHTML = html;
+                modal.classList.add('active');
+
             } catch (err) {
-            console.error(err);
-            alert("Error loading details");
+                console.error(err);
+                alert("Error rendering details");
+            }
         }
+
+        function closeDetailsModal() {
+            document.getElementById('interviewDetailsModal').classList.remove('active');
         }
+
+        // Close modal on outside click
+        document.getElementById('interviewDetailsModal').addEventListener('click', function (e) {
+            if (e.target === this) closeDetailsModal();
+        });
 
 
         function logout() {
