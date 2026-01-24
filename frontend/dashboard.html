@@ -173,6 +173,55 @@
         .modal-close:hover {
             color: var(--primary-color);
         }
+
+        /* Learner Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .stat-info h4 {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .stat-info .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
     </style>
 </head>
 
@@ -196,6 +245,40 @@
             <a href="mock-interview.html" id="startInterviewBtn" class="btn btn-primary" style="width: auto;">+ Start
                 New Interview</a>
         </header>
+
+        <!-- Learner Stats Section -->
+        <section id="learner-stats" class="hidden">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: #6366f1;">📊</div>
+                    <div class="stat-info">
+                        <h4>Total Interviews</h4>
+                        <div class="value" id="stat-total">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: #10b981;">⭐</div>
+                    <div class="stat-info">
+                        <h4>Average Score</h4>
+                        <div class="value" id="stat-avg">0.0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: #f59e0b;">🏆</div>
+                    <div class="stat-info">
+                        <h4>Highest Score</h4>
+                        <div class="value" id="stat-high">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: #ec4899;">💼</div>
+                    <div class="stat-info">
+                        <h4>Top Role</h4>
+                        <div class="value" id="stat-role" style="font-size: 1rem;">-</div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <section id="admin-section" class="hidden">
             <div class="admin-tabs">
@@ -338,6 +421,13 @@
                 if (res.status === 401 || res.status === 403) return logout();
 
                 const data = await res.json();
+
+                // If learner, calculate and show stats
+                if (role !== 'admin') {
+                    document.getElementById('learner-stats').classList.remove('hidden');
+                    calculateLearnerStats(data);
+                }
+
                 const list = document.getElementById('interview-list');
 
                 if (data.length === 0) {
@@ -440,6 +530,43 @@
                 document.getElementById('user-list').innerHTML = '<div class="empty-state">Failed to load users.</div>';
             }
         }
+        }
+
+
+        function calculateLearnerStats(interviews) {
+            if (!interviews || interviews.length === 0) return;
+
+            // Total
+            document.getElementById('stat-total').innerText = interviews.length;
+
+            // Average & High Score
+            let allScores = [];
+            interviews.forEach(i => {
+                if (i.scores && i.scores.length > 0) allScores.push(...i.scores);
+            });
+
+            if (allScores.length > 0) {
+                const avg = (allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(1);
+                const high = Math.max(...allScores);
+                document.getElementById('stat-avg').innerText = avg;
+                document.getElementById('stat-high').innerText = high;
+            }
+
+            // Top Role
+            const roles = {};
+            interviews.forEach(i => {
+                const r = i.role || 'General';
+                roles[r] = (roles[r] || 0) + 1;
+            });
+
+            if (Object.keys(roles).length > 0) {
+                const topRole = Object.keys(roles).reduce((a, b) => roles[a] > roles[b] ? a : b);
+                document.getElementById('stat-role').innerText = topRole;
+            }
+        }
+
+
+        // --- Admin Action Handlers ---
 
 
         // --- Admin Action Handlers ---
