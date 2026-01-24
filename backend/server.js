@@ -88,8 +88,8 @@ app.post("/register", async (req, res) => {
 
     await db.run("INSERT INTO users (email, password, role) VALUES (?, ?, ?)", [email, hashedPassword, role]);
 
-    // Send Welcome Email
-    await sendEmail(
+    // Send Welcome Email (Non-blocking)
+    sendEmail(
       email,
       "Welcome to AI Interview Coach!",
       `Hello!\n\nThank you for signing up. We are excited to help you ace your interviews!\n\nBest,\nAI Interview Coach Team`
@@ -114,8 +114,8 @@ app.post("/login", async (req, res) => {
 
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: "1h" });
 
-    // Send Login Notification
-    await sendEmail(
+    // Send Login Notification (Non-blocking)
+    sendEmail(
       email,
       "New Login Detected",
       `Hello!\n\nWe detected a new login to your account.\n\nTime: ${new Date().toLocaleString()}\n\nIf this wasn't you, please secure your account.`
