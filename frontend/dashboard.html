@@ -280,10 +280,10 @@
             </div>
         </section>
 
-        <section id="admin-section" class="hidden">
+        <section id="dashboard-nav">
             <div class="admin-tabs">
                 <button class="tab-btn active" onclick="switchTab('interviews')">Past Interviews</button>
-                <button id="admin-analytics-tab" class="tab-btn" onclick="switchTab('performance')">Performance
+                <button id="analytics-tab" class="tab-btn" onclick="switchTab('performance')">Performance
                     Analytics</button>
                 <button id="admin-tab-btn" class="tab-btn hidden" onclick="switchTab('users')">User Management</button>
             </div>
@@ -304,9 +304,17 @@
             <div class="interview-list-header">
                 <h3>Performance Analytics</h3>
             </div>
-            <div class="card"
-                style="background: var(--card-bg); padding: 20px; border-radius: var(--radius); border: 1px solid var(--card-border);">
-                <canvas id="performanceChart"></canvas>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+                <div class="card"
+                    style="background: var(--card-bg); padding: 20px; border-radius: var(--radius); border: 1px solid var(--card-border);">
+                    <h4 style="margin-bottom: 15px; color: var(--text-muted);">Progress Over Time</h4>
+                    <canvas id="performanceChart"></canvas>
+                </div>
+                <div class="card"
+                    style="background: var(--card-bg); padding: 20px; border-radius: var(--radius); border: 1px solid var(--card-border);">
+                    <h4 style="margin-bottom: 15px; color: var(--text-muted);">Average Score by Role</h4>
+                    <canvas id="rolePerformanceChart"></canvas>
+                </div>
             </div>
         </section>
 
@@ -404,13 +412,12 @@
             document.querySelector('.welcome-text p').innerText = "Manage users and oversee all interview performance";
             document.querySelector('.welcome-text p').style.color = "#d1d5db";
 
-            document.getElementById('admin-section').classList.remove('hidden');
             document.getElementById('admin-tab-btn').classList.remove('hidden');
 
             // Hide the Start Interview button for admins
             document.getElementById('startInterviewBtn').style.display = 'none';
             // Hide separate performance tab for admins (accessed via Users now)
-            document.getElementById('admin-analytics-tab').style.display = 'none';
+            document.getElementById('analytics-tab').style.display = 'none';
         }
 
         async function fetchInterviews() {
@@ -661,7 +668,8 @@
         // 1. User's Own Analytics (Performance Tab)
         // 2. Admin's Analytics for Specific User (Modal)
 
-        let chartInstance = null; // For the main tab
+        let chartInstance = null; // For the main tab line chart
+        let roleChartInstance = null; // For the main tab bar chart
         let modalChartInstance = null; // For the admin modal
 
         async function renderAnalytics() {
@@ -673,7 +681,13 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const interviews = await res.json();
-                drawChart(interviews, 'performanceChart', 'Your Average Score');
+
+                // Draw Line Chart (Progress)
+                drawChart(interviews, 'performanceChart', 'Average Score Over Time');
+
+                // Draw Bar Chart (Role)
+                drawRoleChart(interviews, 'rolePerformanceChart');
+
             } catch (err) { console.error("Analytics Error:", err); }
         }
 
@@ -736,6 +750,49 @@
 
             if (isModal) modalChartInstance = newChart;
             else chartInstance = newChart;
+        }
+
+        function drawRoleChart(interviews, canvasId) {
+            const roleStats = {};
+
+            interviews.forEach(i => {
+                const r = i.role || 'General';
+                const avg = i.scores.length ? (i.scores.reduce((a, b) => a + b, 0) / i.scores.length) : 0;
+
+                if (!roleStats[r]) {
+                    roleStats[r] = { total: 0, count: 0 };
+                }
+                roleStats[r].total += avg;
+                roleStats[r].count += 1;
+            });
+
+            const labels = Object.keys(roleStats);
+            const data = labels.map(r => (roleStats[r].total / roleStats[r].count).toFixed(1));
+
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (roleChartInstance) roleChartInstance.destroy();
+
+            roleChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Average Score',
+                        data: data,
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderColor: '#10b981',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true, max: 10, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af' } },
+                        x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
         }
 
         async function deleteInterview(interviewId) {

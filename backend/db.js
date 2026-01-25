@@ -72,7 +72,8 @@ export async function getDb() {
         id SERIAL PRIMARY KEY,
         email TEXT UNIQUE,
         password TEXT,
-        role TEXT DEFAULT 'user'
+        role TEXT DEFAULT 'user',
+        last_login TEXT
       );
     `);
 
@@ -88,6 +89,13 @@ export async function getDb() {
         FOREIGN KEY(user_id) REFERENCES users(id)
       );
     `);
+
+    // Migration for existing Postgres databases
+    try {
+      await db.exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TEXT");
+    } catch (err) {
+      console.log("Migration note: " + err.message);
+    }
 
     console.log("PostgreSQL Database initialized");
 
